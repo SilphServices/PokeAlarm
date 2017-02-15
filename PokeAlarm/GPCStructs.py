@@ -41,20 +41,19 @@ class GlobalPokeCache:
 
         # Check optional data
         ivs = data.get('ivs')
+
         if ivs:
             pkmn['move_1_id'] = ivs.get('m1', 'unkn')
             pkmn['move_2_id'] = ivs.get('m2', 'unkn')
             pkmn['atk'] = ivs.get('atk', 'unkn')
             pkmn['def'] = ivs.get('def', 'unkn')
             pkmn['sta'] = ivs.get('sta', 'unkn')
-            atk, def_, sta = data.get('atk'), data.get('def'), data.get('sta')
+            atk, def_, sta = ivs.get('atk'), ivs.get('def'), ivs.get('sta')
             if atk is None or def_ is None or sta is None:
                 pkmn['iv'] = 'unkn'
             else:
                 pkmn['iv'] = float(((atk + def_ + sta) * 100) / float(45))
         pkmn['gmaps'] = get_gmaps_link(pkmn['lat'], pkmn['lng'])
-
-        log.info(pkmn)
 
         return pkmn
 

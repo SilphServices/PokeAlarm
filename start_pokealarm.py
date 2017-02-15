@@ -50,8 +50,6 @@ def index():
 def accept_webhook():
     try:
         log.debug("POST request received from {}.".format(request.remote_addr))
-        log.info(request)
-        log.info(request.data)
 
         data = json.loads(request.data)
         if isinstance(data, list):
