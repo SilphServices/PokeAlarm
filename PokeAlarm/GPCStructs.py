@@ -30,11 +30,11 @@ class GlobalPokeCache:
     def pokemon(data):
         log.debug("Converting to pokemon: \n {}".format(data))
 
-
         pkmn = {
+            'type': 'pokemon',
             'id': data['eid'],
             'pkmn_id': int(data['pid']),
-            'disappear_time': int(data['dts']),
+            'disappear_time': datetime.utcfromtimestamp(data['dts']),
             'lat': float(data['lat']),
             'lng': float(data['lon']),
         }
@@ -49,10 +49,12 @@ class GlobalPokeCache:
             pkmn['sta'] = ivs.get('sta', 'unkn')
             atk, def_, sta = data.get('atk'), data.get('def'), data.get('sta')
             if atk is None or def_ is None or sta is None:
-                pkmn['iv'] = float(((atk + def_ + sta) * 100) / float(45))
-            else:
                 pkmn['iv'] = 'unkn'
+            else:
+                pkmn['iv'] = float(((atk + def_ + sta) * 100) / float(45))
         pkmn['gmaps'] = get_gmaps_link(pkmn['lat'], pkmn['lng'])
+
+        log.info(pkmn)
 
         return pkmn
 

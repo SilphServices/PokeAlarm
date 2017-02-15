@@ -50,8 +50,16 @@ def index():
 def accept_webhook():
     try:
         log.debug("POST request received from {}.".format(request.remote_addr))
+        log.info(request)
+        log.info(request.data)
+
         data = json.loads(request.data)
-        data_queue.put(data)
+        if isinstance(data, list):
+            # GPC data comes in as a list of structs
+            for s in data:
+                data_queue.put(s)
+        else:
+            data_queue.put(data)
     except Exception as e:
         log.error("Encountered error while receiving webhook ({}: {})".format(type(e).__name__, e))
         abort(400)
