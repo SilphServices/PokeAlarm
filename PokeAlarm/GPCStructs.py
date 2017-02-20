@@ -30,11 +30,17 @@ class GlobalPokeCache:
     def pokemon(data):
         log.debug("Converting to pokemon: \n {}".format(data))
 
+        despawn = data.get('dts')
+        if despawn:
+            despawn = datetime.utcfromtimestamp(despawn)
+        else:
+            despawn = 'unkn'
+
         pkmn = {
             'type': 'pokemon',
             'id': data['eid'],
             'pkmn_id': int(data['pid']),
-            'disappear_time': datetime.utcfromtimestamp(data['dts']),
+            'disappear_time': despawn,
             'lat': float(data['lat']),
             'lng': float(data['lon']),
         }

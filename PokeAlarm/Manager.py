@@ -169,11 +169,15 @@ class Manager(object):
                 return
 
         # Check the time remaining
-        seconds_left = (pkmn['disappear_time'] - datetime.utcnow()).total_seconds()
-        if seconds_left < self.__time_limit:
-            if config['QUIET'] is False:
-                log.info("{} ignored: {} seconds remaining.".format(name, seconds_left))
-            return
+        disappear_time = pkmn['disappear_time']
+        if iv != 'unkn':
+            seconds_left = (disappear_time - datetime.utcnow()).total_seconds()
+            if seconds_left < self.__time_limit:
+                if config['QUIET'] is False:
+                    log.info("{} ignored: {} seconds remaining.".format(name, seconds_left))
+                return
+        else:
+            log.debug("Pokemon despawn was not checked because no despawn time was set.")
 
         filt = self.__pokemon_filter[pkmn_id]
 
