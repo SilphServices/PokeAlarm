@@ -171,7 +171,7 @@ class Manager(object):
 
         # Check the time remaining
         disappear_time = pkmn['disappear_time']
-        if iv != 'unkn':
+        if disappear_time != 'unkn':
             seconds_left = (disappear_time - datetime.utcnow()).total_seconds()
             if seconds_left < self.__time_limit:
                 if config['QUIET'] is False:
