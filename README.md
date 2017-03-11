@@ -5,6 +5,9 @@
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=5W9ZTLMS5NB28&lc=US&item_name=PokeAlarm&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)  
 PokeAlarm is a third party extension of [RocketMap](https://github.com/RocketMap/RocketMap) that allows you to receive external notifications through a variety of services, such as Twitter, Facebook, Slack, or Discord.
 
+## Fork Information
+This is a fork of PokeAlarm that supports the GlobalPokeCache scanner. This fork will be merged with the upstream as necessary, and maybe with time merged back in.
+
 #CONFIG CHANGES WARNING
 PokeAlarm has recently updated to Version 3. This is a significant overhaul, and as such, some configuration changes may be required. 
 
@@ -34,6 +37,7 @@ Please read the [**Wiki**](https://github.com/kvangent/PokeAlarm/wiki) before co
 
 ### Discord
 Visit us at our [**Discord channel**](https://discord.gg/TNcqsRr) if you still have issues with your setup. Please stick to the `#troubleshooting` and `#general` chats and avoid sending private messages to any developers. We're working hard, we promise!
+The [**GlobalPokeCache #webhook-support Discord channel**](https://discord.gg/fAvyADe) is where you can go to get help with GPC specific issues. If you're not sure, where to go, come here first.
 
 ### Github
 If you are experiencing issues with the alarm or would like to see new features, please open a ticket on github [here](https://github.com/kvangent/PokeAlarm/issues/new). Be sure to complete the included suppport template and provide as much information as possible.  **Support tickets that do not fully complete the request template WILL be closed without notice.**
