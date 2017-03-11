@@ -15,7 +15,8 @@ import googlemaps
 from . import config
 from WebhookStructs import Geofence
 from Utils import contains_arg, get_cardinal_dir, get_dist_as_str, get_earth_dist, get_move_damage, get_move_dps,\
-    get_move_id, get_move_duration, get_move_energy, get_path, get_pkmn_id, get_team_id, get_time_as_str, parse_boolean
+    get_move_id, get_move_duration, get_move_energy, get_path, get_pkmn_id, get_team_id, get_time_as_str,\
+    parse_boolean, get_pokemon_size, available_sizes
 
 log = logging.getLogger('Manager')
 
@@ -30,7 +31,7 @@ class Manager(object):
 
         # Set up the Google API
         self.__google_key = google_key
-        self.__gmaps_client = googlemaps.Client(key=self.__google_key) if self.__google_key is not None else None
+        self.__gmaps_client = googlemaps.Client(key=self.__google_key, timeout=1) if self.__google_key is not None else None
 
         # Set up the rules on filtering notifications from given file
         self.__pokemon_filter = None
@@ -210,7 +211,6 @@ class Manager(object):
         # Check the moves of the Pokemon
         move_1_id = pkmn['move_1_id']
         move_2_id = pkmn['move_2_id']
-        # TODO: Move damage
         if move_1_id != 'unknown' and move_2_id != 'unknown':
             move_1_f, move_2_f, moveset_f = filt['move_1'], filt['move_2'], filt['moveset']
             if move_1_f is not None and move_1_id not in move_1_f:  # Check Move 1
@@ -247,6 +247,26 @@ class Manager(object):
         else:
             log.debug("Pokemon inside geofences was not checked because no geofences were set.")
 
+        height, weight, gender = pkmn['height'], pkmn['weight'], pkmn['gender']
+        if gender != '?':
+            gender = u'\u2642' if gender is 1 else u'\u2640' if gender is 2 else u'\u26b2' # male, female, neutral
+
+        # Check the sizes of the Pokemon
+        size = None
+        if height != '?' and weight != '?':
+            size = get_pokemon_size(pkmn_id, height, weight)
+        if size is not None:
+            size_f = filt['size']
+            if size_f is not None and size not in size_f:
+                if config['QUIET'] is False:
+                    log.info("{} ignored: size was incorrect.".format(name))
+                return
+        else:
+            log.debug("Pokemon size were not checked because they are unknown.")
+            if filt['ignore_missing'] is True:
+                log.info("{} ignored: size information was missing".format(name))
+                return
+
         time_str = get_time_as_str(pkmn['disappear_time'], self.__timezone)
         pkmn.update({
             'pkmn': name,
@@ -267,7 +287,11 @@ class Manager(object):
             'move_2_damage': get_move_damage(move_2_id),
             'move_2_dps': get_move_dps(move_2_id),
             'move_2_duration': get_move_duration(move_2_id),
-            'move_2_energy': get_move_energy(move_2_id)
+            'move_2_energy': get_move_energy(move_2_id),
+            'height': "{:.1f}".format(height) if height != '?' else '?',
+            'weight': "{:.1f}".format(weight) if weight != '?' else '?',
+            'size': size if size is not None else 'unkn',
+            'gender': gender
         })
         # Optional Stuff
         self.optional_arguments(pkmn)
@@ -501,6 +525,7 @@ class Manager(object):
                         "move_1": self.required_moves(info.get("move_1", None)),
                         "move_2": self.required_moves(info.get("move_2", None)),
                         "moveset": self.required_moveset(info.get("moveset", None)),
+                        "size": self.check_sizes(info.get("size", None)),
                         "ignore_missing": bool(parse_boolean(info.get('ignore_missing', ignore_missing)))
                     }
                 except Exception as e:
@@ -618,6 +643,20 @@ class Manager(object):
             list_.append(self.required_moves(moveset.split('/')))
         return list_
 
+    # Check the list of valid sizes
+    def check_sizes(self, raw_sizes):
+        if raw_sizes is None:  # no sizes
+            return None
+        list_ = []
+        for raw_size in raw_sizes:
+            size = raw_size
+            if size in available_sizes:
+                list_.append(size)
+            else:
+                log.error("Unable to identify provided size '{}'. Please check your spelling.".format(raw_size))
+                sys.exit(1)
+        return list_
+
     ####################################################################################################################
 
     ##################################################  ALARM CREATION #################################################
@@ -663,7 +702,8 @@ class Manager(object):
     # Returns true if string contains an argument that requires
     def set_optional_args(self, line):
         # Reverse Location
-        args = {'address', 'postal', 'neighborhood', 'sublocality', 'city', 'county', 'state', 'country'}
+        args = {'street', 'street_num', 'address', 'postal',
+                'neighborhood', 'sublocality', 'city', 'county', 'state', 'country'}
         self.__api_req['REVERSE_LOCATION'] = self.__api_req['REVERSE_LOCATION'] or contains_arg(line, args)
         log.debug("REVERSE_LOCATION set to %s" % self.__api_req['REVERSE_LOCATION'])
 
@@ -705,28 +745,30 @@ class Manager(object):
 
     # Returns the name of the location based on lat and lng
     def reverse_location(self, lat, lng):
+        # Set defaults in case something goes wrong
+        details = {
+            'street_num':'unkn', 'street':'unknown', 'address':'unknown', 'postal':'unknown','neighborhood':'unknown',
+            'sublocality':'unknown', 'city':'unknown', 'county':'unknown', 'state':'unknown', 'country':'country'
+        }
         if self.__gmaps_client is None:  # Check if key was provided
             log.error("No Google Maps API key provided - unable to reverse geocode.")
-            return {}
-        details = {}
+            return details
         try:
             result = self.__gmaps_client.reverse_geocode((lat, lng))[0]
             loc = {}
             for item in result['address_components']:
                 for category in item['types']:
                     loc[category] = item['short_name']
-            details = {
-                'street_num': loc.get('street_number', 'unkn'),
-                'street': loc.get('route', 'unkn'),
-                'address': "{} {}".format(loc.get('street_number'), loc.get('route')),
-                'postal': loc.get('postal_code', 'unkn'),
-                'neighborhood': loc.get('neighborhood'),
-                'sublocality': loc.get('sublocality'),
-                'city': loc.get('locality', loc.get('postal_town')),  # try postal town if no city
-                'county': loc.get('administrative_area_level_2'),
-                'state': loc.get('administrative_area_level_1'),
-                'country': loc.get('country')
-            }
+            details['street_num'] = loc.get('street_number', 'unkn')
+            details['street'] = loc.get('route', 'unkn')
+            details['address'] = "{} {}".format(details['street_num'], details['street'])
+            details['postal'] = loc.get('postal_code', 'unkn')
+            details['neighborhood'] = loc.get('neighborhood', "unknown")
+            details['sublocality'] = loc.get('sublocality', "unknown")
+            details['city'] = loc.get('locality', loc.get('postal_town', 'unknown'))
+            details['county'] = loc.get('administrative_area_level_2', 'unknown')
+            details['state'] = loc.get('administrative_area_level_1', 'unknown')
+            details['country'] = loc.get('country', 'unknown')
         except Exception as e:
             log.error("Encountered error while getting reverse location data ({}: {})".format(type(e).__name__, e))
             log.debug("Stack trace: \n {}".format(traceback.format_exc()))

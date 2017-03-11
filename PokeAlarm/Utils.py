@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from glob import glob
 import json
 import logging
-from math import radians, sin, cos, atan2, sqrt
+from math import radians, sin, cos, atan2, sqrt, degrees
 import os
 import sys
 # 3rd Party Imports
@@ -148,6 +148,48 @@ def get_move_energy(move_id):
             get_move_energy.info[int(id_)] = j[id_]['energy']
     return get_move_energy.info.get(move_id, 'unkn')
 
+# Returns the base stats for a pokemon
+def get_base_stats(pokemon_id):
+    if not hasattr(get_base_stats, 'info'):
+        get_base_stats.info = {}
+        file_ = get_path('locales/base_stats.json')
+        with open(file_, 'r') as f:
+            j = json.loads(f.read())
+        for id_ in j:
+            get_base_stats.info[int(id_)] = j[id_]
+    return get_base_stats.info.get(pokemon_id, {})
+
+# Returns the base height for a pokemon
+def get_base_height(pokemon_id):
+    return get_base_stats(pokemon_id).get('height')
+
+# Returns the base weight for a pokemon
+def get_base_weight(pokemon_id):
+    return get_base_stats(pokemon_id).get('weight')
+
+# Returns the size ratio of a pokemon
+def size_ratio(pokemon_id, height, weight):
+    height_ratio = height / get_base_height(pokemon_id)
+    weight_ratio = weight / get_base_weight(pokemon_id)
+    return height_ratio + weight_ratio
+
+# All available pokemon sizes
+available_sizes = ['XS', 'Small', 'Normal', 'Large', 'XL']
+
+# Returns the (appraisal) size of a pokemon:
+# XS, Small, Large, XL
+def get_pokemon_size(pokemon_id, height, weight):
+    size = size_ratio(pokemon_id, height, weight)
+    if size < 1.5:
+        return 'XS'
+    elif size <= 1.75:
+        return 'Small'
+    elif size < 2.25:
+        return 'Normal'
+    elif size <= 2.5:
+        return 'Large'
+    else:
+        return 'XL'
 
 
 ########################################################################################################################
@@ -189,30 +231,26 @@ def get_static_map_url(settings):  # TODO: optimize formatting
 
 ################################################## GENERAL UTILITIES ###################################################
 
-# Returns a cardinal direction (N/S/E/W) of the pokemon from the origin point, if set
+#Returns a cardinal direction (N/NW/W/SW, etc) of the pokemon from the origin point, if set
 def get_cardinal_dir(pt_a, pt_b=None):
     if pt_b is None:
         return '?'
-    origin_point = LatLng.from_degrees(*pt_b)
-    lat_lng = LatLng.from_degrees(*pt_a)
-    diff = lat_lng - origin_point
-    diff_lat = diff.lat().degrees
-    diff_lng = diff.lng().degrees
-    direction = (('N' if diff_lat >= 0 else 'S') if abs(diff_lat) > 1e-4 else '') + \
-                (('E' if diff_lng >= 0 else 'W') if abs(diff_lng) > 1e-4 else '')
-    return direction
 
+    lat1, lng1, lat2, lng2 = map(radians, [pt_b[0], pt_b[1], pt_a[0], pt_a[1]])
+    directions = ["S", "SE", "E", "NE", "N", "NW", "W", "SW", "S"]
+    bearing = (degrees(atan2(cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lng2 - lng1), sin(lng2 - lng1) * cos(lat2))) + 450) % 360
+    return directions[int(round(bearing / 45))]
 
 # Return the distance formatted correctly
 def get_dist_as_str(dist):
     if config['UNITS'] == 'imperial':
-        if dist > 1000:
-            return "{:.1f}km".format(dist / 1000)
+        if dist > 1760: # yards per mile
+            return "{:.1f}mi".format(dist / 1760.0)
         else:
-            return "{:.1f}m".format(dist)
+            return "{:.1f}yd".format(dist)
     else:  # Metric
-        if dist > 1760:
-            return "{:.1f}km".format(dist / 1760)
+        if dist > 1000: # meters per km
+            return "{:.1f}km".format(dist / 1000.0)
         else:
             return "{:.1f}m".format(dist)
 
