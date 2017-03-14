@@ -54,6 +54,9 @@ class GlobalPokeCache:
             pkmn['atk'] = ivs.get('atk', 'unkn')
             pkmn['def'] = ivs.get('def', 'unkn')
             pkmn['sta'] = ivs.get('sta', 'unkn')
+            pkmn['height'] = '?'
+            pkmn['weight'] = '?'
+            pkmn['gender'] = '?'
             atk, def_, sta = ivs.get('atk'), ivs.get('def'), ivs.get('sta')
             if atk is None or def_ is None or sta is None:
                 pkmn['iv'] = 'unkn'
